@@ -20,6 +20,21 @@ type Ghost = { id: number; x: number; y: number; size: number; rotate: number };
 export default function Home() {
   const rawX = useMotionValue(0);
   const rawY = useMotionValue(0);
+  const lastInput = useRef(Date.now());
+
+  useEffect(() => {
+    let raf: number;
+    const tick = () => {
+      if (Date.now() - lastInput.current > 3000) {
+        const t = performance.now() / 1000;
+        rawX.set(Math.sin(t * 0.29) * 0.35);
+        rawY.set(Math.sin(t * 0.19 + 1.2) * 0.28);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [rawX, rawY]);
 
   const sLogoX = useSpring(rawX, LOGO_SPRING);
   const sLogoY = useSpring(rawY, LOGO_SPRING);
@@ -45,6 +60,39 @@ export default function Home() {
   const ghostId = useRef(0);
 
   useEffect(() => {
+    const onOrientation = (e: DeviceOrientationEvent) => {
+      lastInput.current = Date.now();
+      rawX.set(Math.max(-1, Math.min(1, (e.gamma ?? 0) / 30)));
+      rawY.set(Math.max(-1, Math.min(1, ((e.beta ?? 0) - 30) / 30)));
+    };
+
+    const listen = () =>
+      window.addEventListener("deviceorientation", onOrientation);
+
+    // iOS 13+ requires explicit permission via a user gesture
+    const DOE = DeviceOrientationEvent as unknown as {
+      requestPermission?: () => Promise<"granted" | "denied">;
+    };
+
+    if (typeof DOE.requestPermission === "function") {
+      const onGesture = () => {
+        DOE.requestPermission!().then((s) => { if (s === "granted") listen(); });
+      };
+      window.addEventListener("touchstart", onGesture, { once: true });
+      window.addEventListener("click", onGesture, { once: true });
+      return () => {
+        window.removeEventListener("touchstart", onGesture);
+        window.removeEventListener("click", onGesture);
+        window.removeEventListener("deviceorientation", onOrientation);
+      };
+    }
+
+    // Android / Chrome — no permission needed
+    listen();
+    return () => window.removeEventListener("deviceorientation", onOrientation);
+  }, [rawX, rawY]);
+
+  useEffect(() => {
     let t: ReturnType<typeof setTimeout>;
     const spawn = () => {
       const id = ++ghostId.current;
@@ -67,6 +115,7 @@ export default function Home() {
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent) => {
+    lastInput.current = Date.now();
     rawX.set((e.clientX / window.innerWidth - 0.5) * 2);
     rawY.set((e.clientY / window.innerHeight - 0.5) * 2);
   };
