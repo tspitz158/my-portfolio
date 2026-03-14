@@ -25,7 +25,7 @@ export default function NotFound() {
       {/* Fuzzy 404 text */}
       <div className="relative z-10 flex flex-col items-center">
         <FuzzyText
-          fontSize="clamp(4rem, 15vw, 12rem)"
+          fontSize="clamp(6rem, 28vw, 14rem)"
           fontWeight={900}
           color="#ffffff"
           baseIntensity={0.3}
