@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   useMotionValue,
   useSpring,
   useTransform,
   motion,
-  AnimatePresence,
 } from "framer-motion";
 import Image from "next/image";
 import ColorBends from "@/components/ColorBends";
@@ -15,7 +14,6 @@ const EASE_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
 const LOGO_SPRING = { stiffness: 18, damping: 34, mass: 2.5 };
 const TEXT_SPRING = { stiffness: 9, damping: 28, mass: 4 };
 
-type Ghost = { id: number; x: number; y: number; size: number; rotate: number };
 
 export default function Home() {
   const rawX = useMotionValue(0);
@@ -56,9 +54,6 @@ export default function Home() {
   const textX = useTransform(sTextX, (v) => v * -4);
   const textY = useTransform(sTextY, (v) => v * -2.5);
 
-  const [ghosts, setGhosts] = useState<Ghost[]>([]);
-  const ghostId = useRef(0);
-
   useEffect(() => {
     const onOrientation = (e: DeviceOrientationEvent) => {
       lastInput.current = Date.now();
@@ -91,28 +86,6 @@ export default function Home() {
     listen();
     return () => window.removeEventListener("deviceorientation", onOrientation);
   }, [rawX, rawY]);
-
-  useEffect(() => {
-    let t: ReturnType<typeof setTimeout>;
-    const spawn = () => {
-      const id = ++ghostId.current;
-      const lifetime = 1800 + Math.random() * 2200;
-      setGhosts((prev) => [
-        ...prev,
-        {
-          id,
-          x: 5 + Math.random() * 88,
-          y: 5 + Math.random() * 88,
-          size: 44 + Math.random() * 68,
-          rotate: (Math.random() - 0.5) * 40,
-        },
-      ]);
-      setTimeout(() => setGhosts((prev) => prev.filter((g) => g.id !== id)), lifetime);
-      t = setTimeout(spawn, 5000 + Math.random() * 7000);
-    };
-    t = setTimeout(spawn, 3500 + Math.random() * 2500);
-    return () => clearTimeout(t);
-  }, []);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     lastInput.current = Date.now();
@@ -167,37 +140,6 @@ export default function Home() {
           style={{ position: "absolute" }}
         />
       </div>
-
-      {/* Ghost logos */}
-      <AnimatePresence>
-        {ghosts.map((g) => (
-          <motion.div
-            key={g.id}
-            initial={{ opacity: 0, rotateY: -90, scale: 0.85, rotate: g.rotate }}
-            animate={{ opacity: 0.09, rotateY: 0, scale: 1, rotate: g.rotate }}
-            exit={{ opacity: 0, rotateY: 90, scale: 0.85, transition: { duration: 0.35, ease: "easeIn" } }}
-            transition={{ type: "spring", stiffness: 140, damping: 16 }}
-            style={{
-              position: "absolute",
-              left: `calc(${g.x}% - ${g.size / 2}px)`,
-              top: `calc(${g.y}% - ${g.size / 2}px)`,
-              width: g.size,
-              height: g.size,
-              perspective: 600,
-              pointerEvents: "none",
-              zIndex: 2,
-            }}
-          >
-            <Image
-              src="/logo.svg"
-              alt=""
-              fill
-              className="object-contain"
-              style={{ filter: "drop-shadow(0 0 6px rgba(255,255,255,0.08))" }}
-            />
-          </motion.div>
-        ))}
-      </AnimatePresence>
 
       {/* Main logo */}
       <motion.div
